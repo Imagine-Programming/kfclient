@@ -30,3 +30,67 @@ be easily modified to support Lua 5.4 if needed.
 |              	| [libfort](https://github.com/seleznevae/libfort) 	| any recent version  	|
 | lkfclient    	| Lua 5.3 (liblua5.3-dev lua5.3)                   	| 5.3                 	|
 
+The boost and fmt dependencies can be installed on many debian based systems, however
+all of these dependencies can be built and installed as per their own instructions by
+using their shipped CMakeLists with the exception of Lua. Lua 5.3 can be installed on
+debian systems, but can be built from source [available at lua.org](https://lua.org).
+
+## Building
+When all dependencies are available on the build system, building all entities is really
+straightforward. Create a build directory anywhere on the system and `cd` into it. Then 
+invoke cmake:
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Release [path_to_kfclient_repository]
+cmake --build . --config Release
+```
+## Installing
+Using cmake, this should also be very straightforward. In the same directory that was used
+to build kfclient in:
+
+```bash
+sudo cmake --install .
+```
+
+## Using the kfclient-cli application
+Assuming it was built and installed, using the kfclient-cli application is quite simple.
+There are not many options to choose from, when you view `kfclient --help` you'll get the
+following output:
+
+```
+a very simple command line utility that implements libkfclient for obtaining information about Killing Floor 2 servers
+Usage: kfclient [OPTIONS] host [port]
+
+Positionals:
+  host TEXT REQUIRED          the host of the Killing Floor 2 server to connect to.
+  port UINT=27015             the port on [host] on which the Killing Floor 2 server can be polled for information. By default, this is 27015
+
+Options:
+  -h,--help                   Print this help message and exit
+  -H,--help-all               show all help.
+  -V,--verbose                output more information.
+  -c,--clean-tables           output tables without borders.
+  -P,--player-count           output the player count and nothing else
+  -r,--report TEXT:{details,rules,players,d,r,p} ...
+                              report a category of information (details, rules, players)
+  -t,--timeout UINT=10        the timeout for datagram operations.
+  -v,--version                display the version of kfclient.
+``` 
+
+**Warning:** the timeout option has not been implemented yet.
+
+### Dumping server information
+If you would like to display the details, rules and players on a server `localhost` at the default port `27015`:
+```bash
+kfclient -rd -rr -rp localhost
+```
+
+Or without formatted tables:
+```bash
+kfclient -c -rd -rr -rp localhost 
+```
+
+Or you want to get the player count on server `localhost` at port `27016`:
+```bash
+kfclient -P localhost 27016 | cut -d ':' -f2 | tr -d ' '
+```
