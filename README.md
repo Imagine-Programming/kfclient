@@ -94,3 +94,31 @@ Or you want to get the player count on server `localhost` at port `27016`:
 ```bash
 kfclient -P localhost 27016 | cut -d ':' -f2 | tr -d ' '
 ```
+
+## Using the Lua library
+Upon a successful build and install, a Lua library interfacing with libkfclient is also
+installed to the system. The path is `/usr/local/lib/lua/5.3/kfclient.so`. You might have
+to reconfigure `ldd` or specify `LD_LIBRARY_PATH` to include this directory on your to 
+ensure that Lua can find it. 
+
+### Simple example:
+```lua
+local kfc = require "kfclient";
+local client = kfc.open("localhost", 27015);  -- use pcall to catch errors 
+local tbl_details = client:details();         -- associative table
+local tbl_rules = client:rules();             -- associative table
+local tbl_players = client:players();         -- sequential table of associative tables 
+client:close();                               -- terminate connection
+
+for name, value in pairs(tbl_details) do 
+  print(name, value);
+end 
+
+for rule, value in pairs(tbl_rules) do 
+  print(rule, type(value), value);
+end 
+
+for _, player in ipairs(tbl_players) do 
+  print(player.id, player.name, player.score, player.time);
+end 
+```
