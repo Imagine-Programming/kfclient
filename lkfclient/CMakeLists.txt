@@ -7,7 +7,9 @@ add_library(${lua_target} SHARED lkfclient.cpp)
 
 find_package(Lua REQUIRED 5.3)
 
-# target_link_libraries(${lua_target} PUBLIC Lua)
+target_include_directories(${lua_target} PUBLIC ${LUA_INCLUDE_DIR})
+
+target_link_libraries(${lua_target} PUBLIC ${LUA_LIBRARIES})
 target_link_libraries(${lua_target} PUBLIC Boost::system)
 target_link_libraries(${lua_target} PUBLIC kfclient)
 

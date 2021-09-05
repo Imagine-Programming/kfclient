@@ -1,4 +1,4 @@
-#include <lua5.3/lua.hpp>
+#include <lua.hpp>
 #include <kfclient.hpp>
 
 #include <memory>
