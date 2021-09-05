@@ -19,3 +19,14 @@ without disrupting playtime.
 This is the Lua 5.3 binding to libkfclient, providing all the functionality from the 
 library to a Lua environment. The CMakeLists.txt and source code in this subdir can 
 be easily modified to support Lua 5.4 if needed. 
+
+## Dependencies
+| entity       	| dependencies                                     	| versions            	|
+|--------------	|--------------------------------------------------	|---------------------	|
+| all          	| libboost_system                                  	| 1.45                	|
+|              	| Threads::Threads                                 	| (pthread preferred) 	|
+| kfclient-cli 	| [fmt](https://github.com/fmtlib/fmt)             	| any recent version  	|
+|              	| [CLI11](https://github.com/CLIUtils/CLI11)       	| any recent version  	|
+|              	| [libfort](https://github.com/seleznevae/libfort) 	| any recent version  	|
+| lkfclient    	| Lua 5.3 (liblua5.3-dev lua5.3)                   	| 5.3                 	|
+
