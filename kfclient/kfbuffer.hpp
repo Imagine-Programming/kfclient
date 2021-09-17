@@ -18,16 +18,17 @@ namespace kfc {
 
     class KFCLIENT_API kfbuffer {
     public:
-        template <std::size_t _Size>
-        kfbuffer(std::uint8_t(&data)[_Size]) 
-            : allocated_(false), data_(data), size_(size), pos_(0) {}
-        
         kfbuffer(std::uint8_t* data, std::size_t size)
             : allocated_(false), data_(data), size_(size), pos_(0) {}
         
-        kfbuffer(std::size_t size)
+        explicit kfbuffer(std::size_t size)
             : allocated_(true), data_(new std::uint8_t[size]), size_(size), pos_(0) {}
         
+        kfbuffer(const kfbuffer&) = delete;
+        kfbuffer(kfbuffer&&) = delete;
+        kfbuffer& operator=(const kfbuffer&) = delete;
+        kfbuffer& operator=(kfbuffer&&) = delete;
+
         ~kfbuffer() {
             if (allocated_)
                 delete[] data_;
@@ -42,7 +43,7 @@ namespace kfc {
         }
 
         void seek(std::streamoff offset, std::ios::seekdir dir = std::ios::cur) const {
-            std::streamoff result;
+            std::streamoff result {};
 
             switch (dir) {
             case std::ios::beg:
@@ -54,6 +55,8 @@ namespace kfc {
             case std::ios::end:
                 result = static_cast<std::streamoff>(size_) - offset;
                 break;
+            default:
+                throw std::logic_error("invalid seek direction");
             }
 
             if (result < 0 || result > static_cast<std::streamoff>(size_))

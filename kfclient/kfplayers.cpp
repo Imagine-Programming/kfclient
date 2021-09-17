@@ -9,4 +9,4 @@ kfc::kfplayers::kfplayers(const kfbuffer& buff) {
 
     for (std::uint8_t i = 0; i < count; ++i) 
         players.emplace_back(buff);
-}
+} 

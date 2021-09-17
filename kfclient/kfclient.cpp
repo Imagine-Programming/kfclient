@@ -20,7 +20,7 @@ void kfc::kfclient::do_connect(const udp::resolver::results_type& endpoints) {
 
 const kfc::kfdetails& kfc::kfclient::request_details() {
     details_ = nullptr;
-    do_request(PACKET_DETAILS, REQUEST_DETAILS, sizeof(REQUEST_DETAILS));
+    do_request(PACKET_DETAILS, REQUEST_DETAILS);
     if (details_ == nullptr)
         throw std::runtime_error("request_details failed, received response could not be processed");
     return *details_;
@@ -28,7 +28,7 @@ const kfc::kfdetails& kfc::kfclient::request_details() {
 
 const kfc::kfrules& kfc::kfclient::request_rules() {
     rules_ = nullptr;
-    do_request(PACKET_RULES, REQUEST_RULES, sizeof(REQUEST_RULES));
+    do_request(PACKET_RULES, REQUEST_RULES);
     if (rules_ == nullptr)
         throw std::runtime_error("request_rules failed, received response could not be processed");
     return *rules_;
@@ -36,7 +36,7 @@ const kfc::kfrules& kfc::kfclient::request_rules() {
 
 const kfc::kfplayers& kfc::kfclient::request_players() {
     players_ = nullptr;
-    do_request(PACKET_PLAYERS, REQUEST_PLAYERS, sizeof(REQUEST_PLAYERS));
+    do_request(PACKET_PLAYERS, REQUEST_PLAYERS);
     if (players_ == nullptr)
         throw std::runtime_error("request_players failed, received repsonse could not be processed");
     return *players_;
@@ -52,24 +52,6 @@ void kfc::kfclient::do_challenge() {
     process_response(PACKET_CHALLENGE);
 }
 
-void kfc::kfclient::do_request(const char packet, const std::uint8_t* request, std::size_t size) {
-    do_challenge();
-
-    boost::system::error_code error;
-
-    std::vector<boost::asio::const_buffer> data = {
-        boost::asio::buffer(request, size),                  // request data
-        boost::asio::buffer(&challenge_, sizeof(challenge_)) // challenge
-    };
-
-    socket_.send(data, 0, error);
-    
-    if (error)
-        throw std::runtime_error(error.message());
-    
-    process_response(packet);
-}
-
 void kfc::kfclient::process_response(char expected_packet) {
     boost::system::error_code error;
     socket_.receive(boost::asio::buffer(recvbuf_.data(), recvbuf_.size()), 0, error);
@@ -78,11 +60,11 @@ void kfc::kfclient::process_response(char expected_packet) {
         throw std::runtime_error(error.message());
 
     recvbuf_.rewind();
-    const auto& header = recvbuf_.consume<kfheader>();
+    const auto& header = recvbuf_.consume<kfheader>(); 
     if (header.magic != -1)
         throw std::runtime_error("unexpected header magic received");
     
-    if (expected_packet != 255 && header.type != expected_packet)
+    if (expected_packet != -1 && header.type != expected_packet)
         throw std::runtime_error("unexpected packet received");
 
     switch (header.type) {

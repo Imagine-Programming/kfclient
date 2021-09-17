@@ -26,10 +26,13 @@ void set_border_style(T& table, const commandline::kfclient_cli& cli) {
     table.set_border_style(cli.isset(commandline::descriptors::NAME_CLEAN) ? NO_BORDER_STYLE : TABLE_BORDER_STYLE);
 }
 
-static const inline std::vector<std::string> DETAIL_HEADERS = { "field", "value" };
-static const inline std::vector<std::string> RULE_HEADERS = { "rule", "value" };
-static const inline std::vector<std::string> PLAYER_HEADERS = { "id", "name", "score", "time" };
-static const inline std::vector<std::string> FILTER_PRECEDENCE = { "details", "rules", "players" };
+static const std::size_t DEFAULT_TIMEOUT = 10;
+static const std::size_t DEFAULT_PORT = 27015;
+
+static inline const std::vector<std::string> DETAIL_HEADERS = { "field", "value" };
+static inline const std::vector<std::string> RULE_HEADERS = { "rule", "value" };
+static inline const std::vector<std::string> PLAYER_HEADERS = { "id", "name", "score", "time" };
+static inline const std::vector<std::string> FILTER_PRECEDENCE = { "details", "rules", "players" };
 
 struct client_instance {
     boost::asio::io_context io_context;
@@ -49,12 +52,11 @@ int report_details(client_instance& instance, const commandline::kfclient_cli& c
 int report_rules(client_instance& instance, const commandline::kfclient_cli& cli);
 int report_players(client_instance& instance, const commandline::kfclient_cli& cli);
 
-static const inline std::unordered_map<std::string, report_function> reporters = {
+static inline const std::unordered_map<std::string, report_function> reporters = {
     { "details", report_details }, { "d", report_details },
     { "rules", report_rules }, { "r", report_rules },
     { "players", report_players }, { "p", report_players }
 };
-
 
 std::unique_ptr<commandline::kfclient_cli> create_cli() {
     using namespace commandline;
@@ -67,9 +69,9 @@ std::unique_ptr<commandline::kfclient_cli> create_cli() {
     cli->add_flag(descriptors::DESC_CLEAN);
     cli->add_flag(descriptors::DESC_PLAYER_COUNT);
     cli->add_option<std::vector<std::string>>(descriptors::DESC_REPORT)->required(false)->check(CLI::IsMember({ "details", "rules", "players", "d", "r", "p" }));
-    cli->add_option<std::size_t>(descriptors::DESC_TIMEOUT)->required(false)->default_val(10)->default_str("10");
+    cli->add_option<std::size_t>(descriptors::DESC_TIMEOUT)->required(false)->default_val(DEFAULT_TIMEOUT)->default_str(std::to_string(DEFAULT_TIMEOUT));
     cli->add_option<std::string>(descriptors::DESC_HOST)->required(true);
-    cli->add_option<std::size_t>(descriptors::DESC_PORT)->required(false)->default_val(27015)->default_str("27015");
+    cli->add_option<std::size_t>(descriptors::DESC_PORT)->required(false)->default_val(DEFAULT_PORT)->default_str(std::to_string(DEFAULT_PORT));
 
 	cli->add_flag(descriptors::DESC_VERSION, [](auto) {
 		fmt::print("{0}\n", "1.0.0.0");
@@ -83,7 +85,7 @@ std::unique_ptr<client_instance> open_client(const std::string& host, const std:
     return std::make_unique<client_instance>(host, protocol);
 }
 
-void verify_cli(const commandline::kfclient_cli& cli) {
+void verify_cli(const commandline::kfclient_cli&) {
     using namespace commandline;
 
     // todo: make sure invalid options are not used together
@@ -100,8 +102,9 @@ void report_detail_impl(fort::utf8_table& t, const char* name, const T& value) {
     t.range_write_ln(row.begin(), row.end());
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define report_detail(T, C, N)\
-    report_detail_impl(T, #N, C.N);
+    report_detail_impl(T, #N, (C).N);
 
 int report_details(client_instance& instance, const commandline::kfclient_cli& cli) {
     try {
@@ -201,25 +204,34 @@ int main(int argc, const char* argv[]) {
     using namespace commandline;
 
 	// create the dynacli CLI11 wrapper
-	auto cli = create_cli();
+    std::unique_ptr<commandline::kfclient_cli> cli;
+    bool verbose = false;
 
 	try {
+        cli = create_cli();
+    } catch (const std::exception& error) {
+        fmt::print(std::cerr, "error: cannot initialize cli parser: {}\n", error.what());
+        return EXIT_FAILURE;
+    }
+
+    // parse argv
+	try {
 		cli->command().parse(argc, argv);
+        verbose = cli->isset(descriptors::NAME_VERBOSE);
 	} catch (const CLI::ParseError& e) {
 		return cli->command().exit(e);
 	}
 
-    auto verbose = cli->isset(descriptors::NAME_VERBOSE);
     std::unique_ptr<client_instance> client = nullptr;
 
     try {
         const auto& host = cli->get<std::string>(descriptors::NAME_HOST);
         const auto& port = cli->get<std::size_t>(descriptors::NAME_PORT);
         client = open_client(host, fmt::format("{}", port));
-        if (verbose) fmt::print("connection established to udp://{}:{}\n", host, port);
+        if (verbose) fmt::print("error: connection established to udp://{}:{}\n", host, port);
     } catch (const std::exception& ex) {
-        fmt::print(std::cerr, "could not successfully instantiate client: {}\n", ex.what());
-        return 1;
+        fmt::print(std::cerr, "error: could not successfully instantiate client: {}\n", ex.what());
+        return EXIT_FAILURE;
     }
 
     verify_cli(*cli);
@@ -230,7 +242,7 @@ int main(int argc, const char* argv[]) {
             fmt::print("online players: {}\n", static_cast<std::size_t>(players.count));
         } catch (const std::exception& ex) {
             fmt::print(std::cerr, "could not successfully obtain player count: {}\n", ex.what());
-            return 2;
+            return EXIT_FAILURE;
         }
     } else {
         if (cli->isset(descriptors::NAME_REPORT)) {

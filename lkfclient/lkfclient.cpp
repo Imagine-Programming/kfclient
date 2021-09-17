@@ -1,6 +1,7 @@
 #include <lua.hpp>
 #include <kfclient.hpp>
 
+#include <vector>
 #include <memory>
 #include <type_traits>
 
@@ -16,17 +17,19 @@ void push(lua_State* L, T v)                  { lua_pushinteger(L, static_cast<l
 void push(lua_State* L, bool v)               { lua_pushboolean(L, static_cast<int>(v)); }
 void push(lua_State* L, const std::string& v) { lua_pushstring(L, v.c_str()); }
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define push_field(L, S, F)\
     lua_pushstring(L, #F);\
-    push(L, S.F);\
+    push(L, (S).F);\
     lua_rawset(L, -3);
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define push_function(L, N, F)\
     lua_pushstring(L, N);\
     lua_pushcfunction(L, F);\
     lua_rawset(L, -3);
 
-static constexpr const char meta_name[] = "kfclient";
+static constexpr const char *meta_name = "kfclient";
 
 struct lkfclient_instance {
     boost::asio::io_context context;
@@ -40,12 +43,12 @@ struct lkfclient_instance {
 };
 
 static int lkfclient_open(lua_State* L) {
-    const auto host = luaL_checkstring(L, 1);
+    const auto *const host = luaL_checkstring(L, 1);
     const auto port = luaL_checkinteger(L, 2);
-    const auto sprt = lua_tostring(L, 2);
+    const auto sprt = std::to_string(port);
 
-    auto memory = lua_newuserdata(L, sizeof(lkfclient_instance));
-    auto instance = new (memory) lkfclient_instance();
+    auto *memory = lua_newuserdata(L, sizeof(lkfclient_instance));
+    auto *instance = new (memory) lkfclient_instance(); // NOLINT(cppcoreguidelines-owning-memory) -- Lua owns the memory and collects it, see lua_newuserdata.
     luaL_setmetatable(L, meta_name);
 
     try {
@@ -59,19 +62,19 @@ static int lkfclient_open(lua_State* L) {
 }
 
 static int lkfclient__gc(lua_State* L) {
-    auto instance = static_cast<lkfclient_instance*>(luaL_checkudata(L, 1, meta_name));
+    auto *instance = static_cast<lkfclient_instance*>(luaL_checkudata(L, 1, meta_name));
     instance->~lkfclient_instance();
     return 0;
 }
 
 static int lkfclient_instance_close(lua_State* L) {
-    auto instance = static_cast<lkfclient_instance*>(luaL_checkudata(L, 1, meta_name));
+    auto *instance = static_cast<lkfclient_instance*>(luaL_checkudata(L, 1, meta_name));
     instance->client = nullptr;
     return 0;
 }
 
 static int lkfclient_instance_details(lua_State* L) {
-    auto instance = static_cast<lkfclient_instance*>(luaL_checkudata(L, 1, meta_name));
+    auto *instance = static_cast<lkfclient_instance*>(luaL_checkudata(L, 1, meta_name));
 
     try {
         const auto& details = instance->client->request_details();
@@ -116,7 +119,7 @@ static int lkfclient_instance_details(lua_State* L) {
 }
 
 static int lkfclient_instance_rules(lua_State* L) {
-    auto instance = static_cast<lkfclient_instance*>(luaL_checkudata(L, 1, meta_name));
+    auto *instance = static_cast<lkfclient_instance*>(luaL_checkudata(L, 1, meta_name));
 
     try {
         const auto& rules = instance->client->request_rules();
@@ -141,7 +144,7 @@ static int lkfclient_instance_rules(lua_State* L) {
 }
 
 static int lkfclient_instance_players(lua_State* L) {
-    auto instance = static_cast<lkfclient_instance*>(luaL_checkudata(L, 1, meta_name));
+    auto *instance = static_cast<lkfclient_instance*>(luaL_checkudata(L, 1, meta_name));
 
     try {
         const auto& players = instance->client->request_players();
@@ -164,12 +167,12 @@ static int lkfclient_instance_players(lua_State* L) {
     }
 }
 
-static const luaL_Reg lkfclient_api[] = {
-    { "open", lkfclient_open }, 
-    { nullptr, nullptr }
-};
-
 extern "C" int luaopen_kfclient(lua_State* L) {
+    static const std::vector<luaL_Reg> lkfclient_api {
+        { "open", lkfclient_open },
+        { nullptr, nullptr }
+    };
+
     luaL_newmetatable(L, meta_name);
     {
         lua_pushstring(L, "__name");
@@ -190,8 +193,10 @@ extern "C" int luaopen_kfclient(lua_State* L) {
     }
 
     lua_pop(L, 1);
-
-    luaL_newlib(L, lkfclient_api);
+    
+    luaL_checkversion(L);
+    lua_createtable(L, 0, static_cast<int>(lkfclient_api.size()) - 1);
+    luaL_setfuncs(L, lkfclient_api.data(), 0);
 
     return 1;
 }

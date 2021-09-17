@@ -21,13 +21,8 @@ namespace commandline {
         /// <typeparam name="TTypes">a list of types of values that can be held by dynacli</typeparam>
         template <typename ...Types>
         struct internal_option {
-            CLI::Option* Option;
+            CLI::Option* Option = nullptr;
             std::variant<Types...> Value;
-
-            internal_option()
-                : Option(nullptr) {
-
-            }
         };
 
         /*
@@ -46,9 +41,6 @@ namespace commandline {
 
         template <typename T, typename A, typename... Args>
         struct contains<T, A, Args...> : contains<T, Args...> {};
-
-        template <typename T, typename... Args>
-        constexpr bool contains_v = contains<T, Args...>::value;
     }
 
     /// <summary>
@@ -86,7 +78,7 @@ namespace commandline {
         /// Bool is required.
         /// </summary>
         static_assert(
-            detail::contains_v<bool, TTypes...>,
+            detail::contains<bool, TTypes...>::value,
             "bool is required as a type to be able to work with flags."
         );
 
@@ -139,7 +131,7 @@ namespace commandline {
         /// Construct a new dynacli instance from a pointer to a <see cref="::CLI::App"/> instance.
         /// </summary>
         /// <param name="command">The CLI11 command.</param>
-        dynacli(CLI::App* command)
+        explicit dynacli(CLI::App* command)
             : command_(*command) {
 
         }
@@ -148,7 +140,7 @@ namespace commandline {
         /// Construct a new dynacli instance from a reference to a <see cref="::CLI::App"/> instance.
         /// </summary>
         /// <param name="command">The CLI11 command.</param>
-        dynacli(CLI::App& command)
+        explicit dynacli(CLI::App& command)
             : command_(command) {
 
         }
@@ -157,7 +149,7 @@ namespace commandline {
         /// Construct a new dynacli instance, which in turn constructs a new <see cref="::CLI::App"/> instance.
         /// </summary>
         /// <param name="description">The description for the command (or program).</param>
-        dynacli(const std::string& description)
+        explicit dynacli(const std::string& description)
             : created_command_(CLI::App(description)), command_(created_command_) {
 
         }
@@ -176,7 +168,7 @@ namespace commandline {
         /// Get a const reference to the internal <see cref="CLI::App"/> instance.
         /// </summary>
         /// <returns>The internal <see cref="CLI::App"/> instance.</returns>
-        const CLI::App& command() const {
+        [[nodiscard]] const CLI::App& command() const {
             return command_;
         }
 
@@ -193,7 +185,7 @@ namespace commandline {
         /// </summary>
         /// <param name="name">The name of the option.</param>
         /// <returns>When the option exists, true is returned.</returns>
-        bool exists(const std::string& name) const {
+        [[nodiscard]] bool exists(const std::string& name) const {
             return options_.count(name) != 0;
         }
 
@@ -204,7 +196,7 @@ namespace commandline {
         /// <typeparam name="TValue">The required value.</typeparam>
         /// <returns>When the option <paramref name="name"/> holds a <typeparamref name="TValue"/>, true is returned.</returns>
         template <typename TValue>
-        bool holds_alternative(const std::string& name) const {
+        [[nodiscard]] bool holds_alternative(const std::string& name) const {
             assert_exist(name);
 
             return std::holds_alternative<TValue>(options_.at(name).Value);
@@ -247,18 +239,18 @@ namespace commandline {
         }
 
         template <typename TValue>
-        const TValue get_isset_or(const std::string& name, const TValue& def = {}) const {
+        TValue get_isset_or(const std::string& name, const TValue& def = {}) const {
             if (!isset(name))
                 return def;
             return std::get<TValue>(options_.at(name).Value);
         }
 
-        bool isset(const std::string& name) const {
+        [[nodiscard]] bool isset(const std::string& name) const {
             assert_exist(name);
             return static_cast<bool>(*options_.at(name).Option);
         }
 
-        bool anyset(const std::initializer_list<std::string>& names) const {
+        [[nodiscard]] bool anyset(const std::initializer_list<std::string>& names) const {
             for (const auto& name : names) {
                 if (isset(name))
                     return true;
@@ -285,12 +277,12 @@ namespace commandline {
             return option.Option;
         }
 
-        CLI::Option* add_flag(const std::string& name, const std::string& flag, const std::string& desc, std::function<void(size_t)> func) {
+        CLI::Option* add_flag(const std::string& name, const std::string& flag, const std::string& desc, std::function<void(size_t)>&& func) {
             assert_not_exists(name);
 
             auto& option = options_[name];
             option.Value = {};
-            option.Option = command_.add_flag(flag, func, desc);
+            option.Option = command_.add_flag(flag, std::move(func), desc);
 
             return option.Option;
         }
@@ -299,14 +291,14 @@ namespace commandline {
             return add_flag(descriptor.Name, descriptor.Flag, descriptor.Desc);
         }
 
-        CLI::Option* add_flag(const option_descriptor& descriptor, std::function<void(size_t)> func) {
-            return add_flag(descriptor.Name, descriptor.Flag, descriptor.Desc, func);
+        CLI::Option* add_flag(const option_descriptor& descriptor, std::function<void(size_t)>&& func) {
+            return add_flag(descriptor.Name, descriptor.Flag, descriptor.Desc, std::move(func));
         }
 
         template <typename TValue>
         CLI::Option* add_option(const std::string& name, const std::string& flag, const std::string& desc) {
             static_assert(
-                detail::contains_v<TValue, TTypes...>,
+                detail::contains<TValue, TTypes...>::value,
                 "invalid type specified in TValue, is not contained in TTypes... of container"
                 );
 
@@ -336,7 +328,7 @@ namespace commandline {
             return *subcommands_[name];
         }
 
-        bool subcommand_exist(const std::string& name) const {
+        [[nodiscard]] bool subcommand_exist(const std::string& name) const {
             return subcommands_.count(name) != 0;
         }
 
@@ -350,7 +342,7 @@ namespace commandline {
             return *subcommands_.at(name);
         }
 
-        bool is_subcommand_chosen() const {
+        [[nodiscard]] bool is_subcommand_chosen() const {
             for (const auto& pair : subcommands_) {
                 if (pair.second->command().parsed())
                     return true;
@@ -359,12 +351,12 @@ namespace commandline {
             return false;
         }
 
-        bool is_subcommand_chosen(const std::string& name) const {
+        [[nodiscard]] bool is_subcommand_chosen(const std::string& name) const {
             assert_subcommand_exist(name);
             return subcommands_.at(name)->command().parsed();
         }
 
-        const std::string& get_chosen_subcommand_name() const {
+        [[nodiscard]] const std::string& get_chosen_subcommand_name() const {
             for (const auto& pair : subcommands_) {
                 if (pair.second->command().parsed())
                     return pair.first;

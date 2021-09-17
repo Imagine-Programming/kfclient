@@ -23,7 +23,7 @@ namespace kfc {
     struct kfrules {
         kfrules(const kfbuffer& buff);
 
-        std::uint16_t count;
+        std::uint16_t count = 0;
         std::vector<kfrule> rules;
     };
 }

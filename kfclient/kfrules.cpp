@@ -16,7 +16,7 @@ kfc::kfrule::kfrule(const kfbuffer& buff) {
     // or perhaps a numeric value?
     char* end = nullptr;
     double val = strtod(value_temp.c_str(), &end);
-    if (end != value_temp.c_str() && *end == '\0' && val != HUGE_VAL) {
+    if (end != value_temp.c_str() && *end == '\0' && val != HUGE_VAL) { 
         value = val;
         return;
     }

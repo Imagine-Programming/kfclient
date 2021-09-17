@@ -1,0 +1,1 @@
+Checks: "*,-fuchsia-*,-google-*,-zircon-*,-abseil-*,-modernize-use-trailing-return-type,-llvm-*,-misc-non-private-member-variables-in-classes,-*-braces-around-statements,-*-pro-bounds-pointer-arithmetic,-readability-named-parameter,-cppcoreguidelines-pro-type-vararg,-hicpp-vararg"

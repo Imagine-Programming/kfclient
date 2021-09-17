@@ -11,18 +11,18 @@
 
 namespace kfc {
     struct kfplayer {
-        kfplayer(const kfbuffer& buff);
+        explicit kfplayer(const kfbuffer& buff);
 
-        std::uint8_t id;
+        std::uint8_t id = 0;
         std::string name;
-        std::uint32_t score;
-        std::uint32_t time;
+        std::uint32_t score = 0;
+        std::uint32_t time = 0;
     };
 
     struct kfplayers {
-        kfplayers(const kfbuffer& buff);
+        explicit kfplayers(const kfbuffer& buff);
 
-        std::uint8_t count;
+        std::uint8_t count = 0;
         std::vector<kfplayer> players;
     };
 }
