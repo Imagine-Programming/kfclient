@@ -11,9 +11,9 @@
 #include "libdef.hpp"
 
 namespace kfc {
-    struct KFCLIENT_API KFCLIENT_PACKED kfheader {
-        std::int32_t magic;
-        char type;
+    struct KFCLIENT_API kfheader {
+        std::int32_t magic = 0;
+        std::int8_t type = 0;
     };
 
     class KFCLIENT_API kfbuffer {

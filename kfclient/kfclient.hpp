@@ -19,10 +19,10 @@ namespace kfc {
         using io_context = boost::asio::io_context;
         using udp = boost::asio::ip::udp;
 
-        static constexpr const char PACKET_CHALLENGE = 'A';
-        static constexpr const char PACKET_PLAYERS = 'D';
-        static constexpr const char PACKET_DETAILS = 'I';
-        static constexpr const char PACKET_RULES = 'E';
+        static constexpr const std::int8_t PACKET_CHALLENGE = 'A';
+        static constexpr const std::int8_t PACKET_PLAYERS = 'D';
+        static constexpr const std::int8_t PACKET_DETAILS = 'I';
+        static constexpr const std::int8_t PACKET_RULES = 'E';
         static constexpr const std::size_t DEFAULT_RECEIVE_BUFFER_SIZE = 2048;
 
         static constexpr const std::array<std::uint8_t, 9> REQUEST_CHALLENGE = {
@@ -51,7 +51,7 @@ namespace kfc {
         void do_challenge();
 
         template <std::size_t _Size>
-        void do_request(char packet, const std::array<std::uint8_t, _Size>& request) {
+        void do_request(std::int8_t packet, const std::array<std::uint8_t, _Size>& request) {
             do_challenge();
 
             boost::system::error_code error;
@@ -69,7 +69,7 @@ namespace kfc {
             process_response(packet);
         }
         
-        void process_response(char expected_packet);
+        void process_response(std::int8_t expected_packet);
 
     private:
         void do_connect(const udp::resolver::results_type& endpoints);

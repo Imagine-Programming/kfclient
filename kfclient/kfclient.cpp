@@ -52,7 +52,7 @@ void kfc::kfclient::do_challenge() {
     process_response(PACKET_CHALLENGE);
 }
 
-void kfc::kfclient::process_response(char expected_packet) {
+void kfc::kfclient::process_response(std::int8_t expected_packet) {
     boost::system::error_code error;
     socket_.receive(boost::asio::buffer(recvbuf_.data(), recvbuf_.size()), 0, error);
 
@@ -60,7 +60,11 @@ void kfc::kfclient::process_response(char expected_packet) {
         throw std::runtime_error(error.message());
 
     recvbuf_.rewind();
-    const auto& header = recvbuf_.consume<kfheader>(); 
+
+    kfheader header;
+    recvbuf_.consume(header.magic);
+    recvbuf_.consume(header.type);
+
     if (header.magic != -1)
         throw std::runtime_error("unexpected header magic received");
     
